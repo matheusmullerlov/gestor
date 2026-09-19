@@ -79,14 +79,14 @@ function RootLayout() {
 
     const projectsSubscription = supabase
       .channel('projects-layout-changes')
-      .on('postgres', { event: '*', schema: 'public', table: 'projects' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
         fetchUserAndData()
       })
       .subscribe()
 
     const departmentsSubscription = supabase
       .channel('departments-layout-changes')
-      .on('postgres', { event: '*', schema: 'public', table: 'departments' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, () => {
         fetchUserAndData()
       })
       .subscribe()
@@ -324,7 +324,7 @@ function RootLayout() {
                                   {catProjects.map((proj) => (
                                     <Link
                                       key={proj.id}
-                                      to={`/projects/$projectId`}
+                                      to="/projects/$projectId"
                                       params={{ projectId: proj.id }}
                                       activeProps={{ className: 'text-blue-400 font-semibold' }}
                                       inactiveProps={{ className: 'text-slate-400 hover:text-slate-200' }}
@@ -343,7 +343,7 @@ function RootLayout() {
                         {uncategorizedProjects.map((proj) => (
                           <Link
                             key={proj.id}
-                            to={`/projects/$projectId`}
+                            to="/projects/$projectId"
                             params={{ projectId: proj.id }}
                             activeProps={{ className: 'text-blue-400 font-semibold' }}
                             inactiveProps={{ className: 'text-slate-400 hover:text-slate-200' }}
@@ -385,7 +385,7 @@ function RootLayout() {
                       {unassignedProjects.map((proj) => (
                         <Link
                           key={proj.id}
-                          to={`/projects/$projectId`}
+                          to="/projects/$projectId"
                           params={{ projectId: proj.id }}
                           activeProps={{ className: 'text-blue-400 font-semibold' }}
                           inactiveProps={{ className: 'text-slate-400 hover:text-slate-200' }}
