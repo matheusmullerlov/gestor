@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, CheckCircle, Clock, AlertCircle, BarChart3, Users, Building, Activity } from 'lucide-react'
+import { LayoutDashboard, CheckCircle, Clock, AlertCircle, BarChart3, Users, Building, Activity, Search } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 
 export const Route = createFileRoute('/')({
@@ -14,6 +14,7 @@ function Dashboard() {
   const [projects, setProjects] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [taskFilter, setTaskFilter] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -58,8 +59,14 @@ function Dashboard() {
   const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'todo').length
   const inProgressTasks = totalTasks - completedTasks - pendingTasks
 
-  // Minhas Tarefas
-  const myTasks = tasks.filter(t => t.assigned_to === currentUser?.id)
+  // Minhas Tarefas com Filtro
+  const myTasks = tasks
+    .filter(t => t.assigned_to === currentUser?.id)
+    .filter(t => 
+      t.name?.toLowerCase().includes(taskFilter.toLowerCase()) || 
+      t.priority?.toLowerCase().includes(taskFilter.toLowerCase()) ||
+      t.status?.toLowerCase().includes(taskFilter.toLowerCase())
+    )
 
   // Carga de trabalho (top 5 com mais tarefas pendentes/em progresso)
   const workload = users.map(user => {
@@ -187,11 +194,21 @@ function Dashboard() {
 
       {/* Minhas Tarefas Tabela */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-emerald-500" />
             Minhas Tarefas
           </h3>
+          <div className="relative w-full md:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              placeholder="Filtrar tarefas..." 
+              value={taskFilter}
+              onChange={(e) => setTaskFilter(e.target.value)}
+              className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full bg-slate-50"
+            />
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -207,7 +224,7 @@ function Dashboard() {
               {myTasks.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-slate-500">
-                    Tudo limpo! Nenhuma tarefa atribuída a você no momento.
+                    Nenhuma tarefa encontrada.
                   </td>
                 </tr>
               ) : (
