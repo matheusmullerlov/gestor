@@ -115,49 +115,64 @@ function RootLayout() {
   }, [])
 
   const fetchUserAndData = async () => {
+    setProjectsStatus('loading')
+
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      const session = sessionData.session
+
+      if (sessionError || !session?.user) {
+        setProjects([])
+        setProjectsStatus('error')
         if (location.pathname !== '/auth') navigate({ to: '/auth', replace: true })
         return
       }
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('hub_users')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle()
-        
-        if (profile) {
-          setCurrentUser({
-            id: profile.id,
-            name: profile.name || session.user.email || 'Usuário',
-            role: profile.role || 'colaborador',
-            email: profile.email || session.user.email || ''
-          })
-        } else {
-          setCurrentUser({
-            id: session.user.id,
-            name: session.user.email?.split('@')[0] || 'Usuário',
-            role: 'administrador',
-            email: session.user.email || ''
-          })
-        }
+
+      const { data: profile } = await supabase
+        .from('hub_users')
+        .select('id, name, role, email')
+        .eq('id', session.user.id)
+        .maybeSingle()
+
+      if (profile) {
+        setCurrentUser({
+          id: profile.id,
+          name: profile.name || session.user.email || 'Usuário',
+          role: profile.role || 'colaborador',
+          email: profile.email || session.user.email || ''
+        })
+      } else {
+        setCurrentUser({
+          id: session.user.id,
+          name: session.user.email?.split('@')[0] || 'Usuário',
+          role: 'administrador',
+          email: session.user.email || ''
+        })
       }
 
-      const { data: deptsData, error: deptsError } = await supabase
-        .from('departments')
-        .select('*')
-        .order('sort_order', { ascending: true, nullsFirst: false })
+      const [{ data: deptsData, error: deptsError }, { data: projsData, error: projsError }] = await Promise.all([
+        supabase
+          .from('departments')
+          .select('id, name, sort_order')
+          .order('sort_order', { ascending: true, nullsFirst: false }),
+        supabase
+          .from('projects')
+          .select('id, name, department_id, category_name, sort_order')
+          .order('sort_order', { ascending: true, nullsFirst: false })
+          .order('name', { ascending: true })
+      ])
 
-      if (!deptsError && deptsData) {
-        setDepartments(deptsData as Department[])
+      if (deptsError) {
+        console.error('Erro ao carregar departamentos:', deptsError)
+      } else {
+        const departmentsData = (deptsData || []) as Department[]
+        setDepartments(departmentsData)
         setExpandedDepts(prev => {
           const next = { ...prev }
           let changed = false
-          deptsData.forEach(d => {
-            if (next[d.id] === undefined) {
-              next[d.id] = true
+          departmentsData.forEach(department => {
+            if (next[department.id] === undefined) {
+              next[department.id] = true
               changed = true
             }
           })
@@ -165,36 +180,34 @@ function RootLayout() {
         })
       }
 
-      const { data: projsData, error: projsError } = await supabase
-        .from('projects')
-        .select('*')
-        .order('sort_order', { ascending: true, nullsFirst: false })
-        .order('name', { ascending: true })
-
       if (projsError) {
+        setProjects([])
         setProjectsStatus('error')
         console.error('Erro ao carregar projetos:', projsError)
-      } else if (projsData) {
-        setProjects(projsData as Project[])
-        setProjectsStatus(projsData.length === 0 ? 'empty' : 'success')
-        
-        setExpandedCategories(prev => {
-          const next = { ...prev }
-          let changed = false
-          projsData.forEach((p: any) => {
-            const cat = p.category_name?.trim()
-            if (p.department_id && cat) {
-              const catKey = `${p.department_id}-${cat}`
-              if (next[catKey] === undefined) {
-                next[catKey] = true
-                changed = true
-              }
-            }
-          })
-          return changed ? next : prev
-        })
+        return
       }
+
+      const projectsData = (projsData || []) as Project[]
+      setProjects(projectsData)
+      setProjectsStatus(projectsData.length === 0 ? 'empty' : 'success')
+
+      setExpandedCategories(prev => {
+        const next = { ...prev }
+        let changed = false
+        projectsData.forEach(project => {
+          const category = project.category_name?.trim()
+          if (project.department_id && category) {
+            const categoryKey = `${project.department_id}-${category}`
+            if (next[categoryKey] === undefined) {
+              next[categoryKey] = true
+              changed = true
+            }
+          }
+        })
+        return changed ? next : prev
+      })
     } catch (err) {
+      setProjects([])
       setProjectsStatus('error')
       console.error('Erro ao carregar dados:', err)
     }
