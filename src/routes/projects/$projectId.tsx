@@ -49,6 +49,7 @@ type Project = {
   id: string
   name: string
   category_name: string | null
+  objective: string | null
 }
 
 type UserProfile = {
@@ -105,7 +106,7 @@ function ProjectDetailPage() {
     setLoading(true)
     setError('')
     const [{ data: projectData, error: projectError }, { data: taskData, error: taskError }, { data: userData }] = await Promise.all([
-      supabase.from('projects').select('id, name, category_name').eq('id', projectId).maybeSingle(),
+      supabase.from('projects').select('id, name, category_name, objective').eq('id', projectId).maybeSingle(),
       supabase.from('tasks').select('id, project_id, name, description, status, assigned_to, created_by, due_date, priority, tags, checklist').eq('project_id', projectId).order('created_by'),
       supabase.from('hub_users').select('id, name, email').order('name'),
     ])
@@ -161,10 +162,14 @@ function ProjectDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-blue-100 p-3 text-blue-700"><Folder className="h-6 w-6" /></div>
-          <div><h1 className="text-2xl font-bold tracking-tight text-slate-900">{project.name}</h1><p className="mt-1 text-sm text-slate-500">{project.category_name || 'Processo operacional'} · {tasks.length} tarefa{tasks.length === 1 ? '' : 's'}</p></div>
+      <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-start">
+        <div className="flex items-start gap-4">
+          <div className="mt-1 shrink-0 rounded-xl bg-blue-100 p-3 text-blue-700"><Folder className="h-6 w-6" /></div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{project.name}</h1>
+            <p className="mt-1 text-sm text-slate-500">{project.category_name || 'Processo operacional'} · {tasks.length} tarefa{tasks.length === 1 ? '' : 's'}</p>
+            {project.objective && <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{project.objective}</p>}
+          </div>
         </div>
         <button onClick={() => setIsCreating(true)} className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"><Plus className="h-4 w-4" /> Nova tarefa</button>
       </div>
