@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { createRootRoute, Outlet, Link, useLocation } from '@tanstack/react-router'
+import { createRootRoute, Outlet, Link, useLocation, useNavigate } from '@tanstack/react-router'
 import {
   LayoutDashboard,
   Calendar,
@@ -57,6 +57,7 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [departments, setDepartments] = useState<Department[]>(DEFAULT_DEPARTMENTS)
   const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>({
@@ -77,6 +78,14 @@ function RootLayout() {
   useEffect(() => {
     fetchUserAndData()
 
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session && location.pathname !== '/auth') {
+        navigate({ to: '/auth', replace: true })
+      } else if (session && location.pathname === '/auth') {
+        navigate({ to: '/', replace: true })
+      }
+    })
+
     const projectsSubscription = supabase
       .channel('projects-layout-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
@@ -92,6 +101,7 @@ function RootLayout() {
       .subscribe()
 
     return () => {
+      authListener.subscription.unsubscribe()
       supabase.removeChannel(projectsSubscription)
       supabase.removeChannel(departmentsSubscription)
     }
@@ -100,6 +110,10 @@ function RootLayout() {
   const fetchUserAndData = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        if (location.pathname !== '/auth') navigate({ to: '/auth', replace: true })
+        return
+      }
       if (session?.user) {
         const { data: profile } = await supabase
           .from('hub_users')
@@ -197,6 +211,10 @@ function RootLayout() {
   }
 
   const headerInfo = getHeaderTitle()
+
+  if (location.pathname === '/auth') {
+    return <Outlet />
+  }
 
   return (
     <div className="min-h-screen flex bg-slate-50 text-slate-900 font-sans">
