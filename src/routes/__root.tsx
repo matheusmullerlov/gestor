@@ -82,8 +82,14 @@ function RootLayout() {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session && location.pathname !== '/auth') {
         navigate({ to: '/auth', replace: true })
-      } else if (session && location.pathname === '/auth') {
-        navigate({ to: '/', replace: true })
+      } else if (session) {
+        if (location.pathname === '/auth') {
+          navigate({ to: '/', replace: true })
+        }
+        // Forçar atualização dos dados quando o usuário logar ou o token atualizar para limpar o bloqueio de RLS
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          fetchUserAndData()
+        }
       }
     })
 
@@ -142,7 +148,7 @@ function RootLayout() {
       const { data: deptsData, error: deptsError } = await supabase
         .from('departments')
         .select('*')
-        .order('sort_order', { ascending: true })
+        .order('sort_order', { ascending: true, nullsFirst: false })
 
       if (!deptsError && deptsData) {
         setDepartments(deptsData as Department[])
@@ -162,7 +168,7 @@ function RootLayout() {
       const { data: projsData, error: projsError } = await supabase
         .from('projects')
         .select('*')
-        .order('sort_order', { ascending: true })
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('name', { ascending: true })
 
       if (projsError) {
@@ -176,8 +182,9 @@ function RootLayout() {
           const next = { ...prev }
           let changed = false
           projsData.forEach((p: any) => {
-            if (p.department_id && p.category_name) {
-              const catKey = `${p.department_id}-${p.category_name}`
+            const cat = p.category_name?.trim()
+            if (p.department_id && cat) {
+              const catKey = `${p.department_id}-${cat}`
               if (next[catKey] === undefined) {
                 next[catKey] = true
                 changed = true
@@ -298,16 +305,17 @@ function RootLayout() {
                   .filter((project) => project.department_id === dept.id)
                   .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || (a.name || '').localeCompare(b.name || ''))
                 
-                // Agrupar projetos por categoria
+                // Agrupar projetos por categoria de forma limpa
                 const categoriesMap: Record<string, Project[]> = {}
                 const uncategorizedProjects: Project[] = []
 
                 deptProjects.forEach(proj => {
-                  if (proj.category_name) {
-                    if (!categoriesMap[proj.category_name]) {
-                      categoriesMap[proj.category_name] = []
+                  const cat = proj.category_name?.trim()
+                  if (cat) {
+                    if (!categoriesMap[cat]) {
+                      categoriesMap[cat] = []
                     }
-                    categoriesMap[proj.category_name].push(proj)
+                    categoriesMap[cat].push(proj)
                   } else {
                     uncategorizedProjects.push(proj)
                   }
