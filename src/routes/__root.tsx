@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { createRootRoute, Outlet, Link, useLocation } from '@tanstack/react-router'
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Folder, 
-  FolderOpen, 
-  ChevronDown, 
-  ChevronRight, 
-  Plus, 
-  LogOut, 
-  User, 
-  Briefcase 
+import {
+  LayoutDashboard,
+  Calendar,
+  Folder,
+  FolderOpen,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  LogOut,
+  User,
+  Briefcase,
+  DollarSign
 } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 
@@ -137,6 +138,7 @@ function RootLayout() {
     const path = location.pathname
     if (path === '/') return { title: 'Início', subtitle: 'Visão geral do sistema e indicadores centrais' }
     if (path === '/agenda') return { title: 'Agenda Corporativa', subtitle: 'Eventos, reuniões e compromissos agendados' }
+    if (path === '/financeiro') return { title: 'Fluxo de Caixa', subtitle: 'Gestão financeira, controle de entradas, saídas e provisões' }
     if (path.startsWith('/projects/')) return { title: 'Detalhes do Processo', subtitle: 'Acompanhamento de tarefas e progresso do projeto' }
     return { title: 'Painel Gestor', subtitle: 'Hub Operacional' }
   }
@@ -180,6 +182,16 @@ function RootLayout() {
             >
               <Calendar className="w-4 h-4" />
               <span>Agenda</span>
+            </Link>
+
+            <Link
+              to="/financeiro"
+              activeProps={{ className: 'bg-blue-600/20 text-blue-400 font-semibold border-l-4 border-blue-500' }}
+              inactiveProps={{ className: 'text-slate-300 hover:bg-slate-800/60 hover:text-white' }}
+              className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150"
+            >
+              <DollarSign className="w-4 h-4" />
+              <span>Financeiro</span>
             </Link>
           </nav>
 
