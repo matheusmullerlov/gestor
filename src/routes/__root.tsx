@@ -60,6 +60,7 @@ function RootLayout() {
   const navigate = useNavigate()
   const [departments, setDepartments] = useState<Department[]>(DEFAULT_DEPARTMENTS)
   const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS)
+  const [projectsStatus, setProjectsStatus] = useState<'loading' | 'empty' | 'error' | 'success'>('loading')
   const [currentUser, setCurrentUser] = useState<UserProfile | null>({
     id: 'user-admin',
     name: 'Administrador',
@@ -164,8 +165,13 @@ function RootLayout() {
         .order('sort_order', { ascending: true })
         .order('name', { ascending: true })
 
-      if (!projsError && projsData) {
+      if (projsError) {
+        setProjectsStatus('error')
+        console.error('Erro ao carregar projetos:', projsError)
+      } else if (projsData) {
         setProjects(projsData as Project[])
+        setProjectsStatus(projsData.length === 0 ? 'empty' : 'success')
+        
         setExpandedCategories(prev => {
           const next = { ...prev }
           let changed = false
@@ -182,6 +188,7 @@ function RootLayout() {
         })
       }
     } catch (err) {
+      setProjectsStatus('error')
       console.error('Erro ao carregar dados:', err)
     }
   }
@@ -271,6 +278,18 @@ function RootLayout() {
             <div className="px-3 mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
               <span>Departamentos</span>
             </div>
+
+            {projectsStatus === 'empty' && (
+               <div className="mx-3 mb-3 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-md text-xs text-yellow-200">
+                 Nenhum processo encontrado ou sem permissão de acesso.
+               </div>
+            )}
+            
+            {projectsStatus === 'error' && (
+               <div className="mx-3 mb-3 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-md text-xs text-red-200">
+                 Erro de leitura nos processos.
+               </div>
+            )}
 
             <div className="space-y-1.5">
               {departments.map((dept) => {
