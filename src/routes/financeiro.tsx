@@ -32,11 +32,18 @@ function FinanceiroView() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
+  const getLocalDateString = (d: Date = new Date()) => {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
-    transaction_date: new Date().toISOString().split('T')[0],
+    transaction_date: getLocalDateString(),
     type: 'entrada',
     category: ''
   })
@@ -132,7 +139,7 @@ function FinanceiroView() {
       setFormData({
         description: '',
         amount: '',
-        transaction_date: new Date().toISOString().split('T')[0],
+        transaction_date: getLocalDateString(),
         type: 'entrada',
         category: ''
       })
@@ -157,7 +164,7 @@ function FinanceiroView() {
       .from('financial_transactions')
       .update({
         type: 'saída',
-        transaction_date: new Date().toISOString().split('T')[0]
+        transaction_date: getLocalDateString()
       })
       .eq('id', id)
 
@@ -179,7 +186,7 @@ function FinanceiroView() {
       formatDate(t.transaction_date),
       t.type,
       t.category || '',
-      `"${t.description}"`,
+      `"${t.description.replace(/"/g, '""')}"`,
       t.amount
     ])
 
