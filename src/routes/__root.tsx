@@ -76,6 +76,25 @@ function RootLayout() {
 
   useEffect(() => {
     fetchUserAndData()
+
+    const projectsSubscription = supabase
+      .channel('projects-layout-changes')
+      .on('postgres', { event: '*', schema: 'public', table: 'projects' }, () => {
+        fetchUserAndData()
+      })
+      .subscribe()
+
+    const departmentsSubscription = supabase
+      .channel('departments-layout-changes')
+      .on('postgres', { event: '*', schema: 'public', table: 'departments' }, () => {
+        fetchUserAndData()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(projectsSubscription)
+      supabase.removeChannel(departmentsSubscription)
+    }
   }, [])
 
   const fetchUserAndData = async () => {
@@ -108,20 +127,45 @@ function RootLayout() {
       const { data: deptsData, error: deptsError } = await supabase
         .from('departments')
         .select('*')
-        .order('sort_order')
+        .order('sort_order', { ascending: true })
 
-      if (!deptsError) {
-        setDepartments((deptsData || []) as Department[])
+      if (!deptsError && deptsData) {
+        setDepartments(deptsData as Department[])
+        setExpandedDepts(prev => {
+          const next = { ...prev }
+          let changed = false
+          deptsData.forEach(d => {
+            if (next[d.id] === undefined) {
+              next[d.id] = true
+              changed = true
+            }
+          })
+          return changed ? next : prev
+        })
       }
 
       const { data: projsData, error: projsError } = await supabase
         .from('projects')
         .select('*')
-        .order('sort_order')
-        .order('name')
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true })
 
-      if (!projsError) {
-        setProjects((projsData || []) as Project[])
+      if (!projsError && projsData) {
+        setProjects(projsData as Project[])
+        setExpandedCategories(prev => {
+          const next = { ...prev }
+          let changed = false
+          projsData.forEach((p: any) => {
+            if (p.department_id && p.category_name) {
+              const catKey = `${p.department_id}-${p.category_name}`
+              if (next[catKey] === undefined) {
+                next[catKey] = true
+                changed = true
+              }
+            }
+          })
+          return changed ? next : prev
+        })
       }
     } catch (err) {
       console.error('Erro ao carregar dados:', err)
@@ -215,7 +259,7 @@ function RootLayout() {
                 const isDeptExpanded = !!expandedDepts[dept.id]
                 const deptProjects = projects
                   .filter((project) => project.department_id === dept.id)
-                  .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name))
+                  .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || (a.name || '').localeCompare(b.name || ''))
                 
                 // Agrupar projetos por categoria
                 const categoriesMap: Record<string, Project[]> = {}
@@ -328,7 +372,7 @@ function RootLayout() {
               {(() => {
                 const unassignedProjects = projects
                   .filter((project) => !project.department_id || !departments.some((department) => department.id === project.department_id))
-                  .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name))
+                  .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || (a.name || '').localeCompare(b.name || ''))
 
                 if (unassignedProjects.length === 0) return null
 
