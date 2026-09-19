@@ -105,14 +105,23 @@ function RootLayout() {
         }
       }
 
-      const { data: deptsData } = await supabase.from('departments').select('*').order('sort_order')
-      if (deptsData && deptsData.length > 0) {
-        setDepartments(deptsData)
+      const { data: deptsData, error: deptsError } = await supabase
+        .from('departments')
+        .select('*')
+        .order('sort_order')
+
+      if (!deptsError) {
+        setDepartments((deptsData || []) as Department[])
       }
 
-      const { data: projsData } = await supabase.from('projects').select('*').order('sort_order')
-      if (projsData && projsData.length > 0) {
-        setProjects(projsData)
+      const { data: projsData, error: projsError } = await supabase
+        .from('projects')
+        .select('*')
+        .order('sort_order')
+        .order('name')
+
+      if (!projsError) {
+        setProjects((projsData || []) as Project[])
       }
     } catch (err) {
       console.error('Erro ao carregar dados:', err)
@@ -204,7 +213,9 @@ function RootLayout() {
             <div className="space-y-1.5">
               {departments.map((dept) => {
                 const isDeptExpanded = !!expandedDepts[dept.id]
-                const deptProjects = projects.filter(p => p.department_id === dept.id)
+                const deptProjects = projects
+                  .filter((project) => project.department_id === dept.id)
+                  .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name))
                 
                 // Agrupar projetos por categoria
                 const categoriesMap: Record<string, Project[]> = {}
@@ -313,6 +324,36 @@ function RootLayout() {
                   </div>
                 )
               })}
+
+              {(() => {
+                const unassignedProjects = projects
+                  .filter((project) => !project.department_id || !departments.some((department) => department.id === project.department_id))
+                  .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name))
+
+                if (unassignedProjects.length === 0) return null
+
+                return (
+                  <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
+                    <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Sem departamento
+                    </p>
+                    <div className="mt-1 space-y-1">
+                      {unassignedProjects.map((proj) => (
+                        <Link
+                          key={proj.id}
+                          to={`/projects/$projectId`}
+                          params={{ projectId: proj.id }}
+                          activeProps={{ className: 'text-blue-400 font-semibold' }}
+                          inactiveProps={{ className: 'text-slate-400 hover:text-slate-200' }}
+                          className="block truncate rounded px-2 py-1.5 text-xs transition-colors hover:bg-slate-800/40"
+                        >
+                          {proj.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>
